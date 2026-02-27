@@ -1,15 +1,17 @@
+import os
+import dj_database_url
 from pathlib import Path
-from datetime import timedelta # JWT үшін керек
+from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-6-xzkn(qnwgt!u@=8+!sidpokm0h6e0p*6v8!^c_74y%q1%z=*'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-6-xzkn(qnwgt!u@=8+!sidpokm0h6e0p*6v8!^c_74y%q1%z=*')
 
-DEBUG = True
+# Render-де DEBUG-ты False қылған дұрыс, бірақ қазірше True тұра берсін
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
-# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -21,6 +23,7 @@ INSTALLED_APPS = [
     # СЕРІКТЕС КІТАПХАНАЛАР
     'rest_framework',
     'rest_framework_simplejwt',
+    'whitenoise.runserver_nostatic', # Статика үшін
     
     # СЕНІҢ ҚОСЫМШАҢ
     'config', 
@@ -28,6 +31,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # ОРНЫ ОСЫ ЖЕРДЕ БОЛУЫ ТИІС
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -55,32 +59,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# DATABASE (PostgreSQL)
+# DATABASE - Render PostgreSQL-ге автоматты қосылу
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'vebb_db',
-        'USER': 'postgres',
-        'PASSWORD': '1234', 
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600
+    )
 }
 
-# --- CUSTOM USER MODEL ---
-# Осы жер маңызды: Django-ға өз User-імізді қолдануды айтамыз
 AUTH_USER_MODEL = 'config.User'
 
-# --- DJANGO REST FRAMEWORK SETTINGS ---
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
-    # Пагинацияны қосу
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,  # Бір бетте шығатын жазбалар саны (өзіңе ыңғайлы санды қой)
+    'PAGE_SIZE': 10,
 }
-# --- SIMPLE JWT SETTINGS ---
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
@@ -101,10 +97,12 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+# СТАТИКАЛЫҚ ФАЙЛДАР (МАҢЫЗДЫ)
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# МЕДИА ФАЙЛДАРДЫ (AVATAR, POSTS) ЖҮКТЕУ ҮШІН
-import os
+# МЕДИА ФАЙЛДАР
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
