@@ -1,13 +1,13 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model  # Стандартты User орнына осыны ал
-from .models import Post, Media, Comment, Like, Follow, SavedPost
+from django.contrib.auth import get_user_model
+from .models import Post, Media, Comment, Like, Follow, SavedPost, Story, StoryLike, StoryReply
 
-User = get_user_model()  # Қазіргі активті User моделін анықтайды
+User = get_user_model()
+
 # 1. Қолданушы сериализаторы
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        # Қажетті өрістерді қос: bio немесе avatar_url тек сенің моделіңде болса ғана жұмыс істейді
         fields = ['id', 'username', 'email']
 
 # 2. Медиа (Сурет/Видео)
@@ -16,12 +16,10 @@ class MediaSerializer(serializers.ModelSerializer):
         model = Media
         fields = ['id', 'post', 'file', 'is_video']
 
-# 3. Посттар (ЕҢ МАҢЫЗДЫСЫ: Лайктар мен Медиа осында)
+# 3. Посттар
 class PostSerializer(serializers.ModelSerializer):
     author_username = serializers.ReadOnlyField(source='author.username')
     media = MediaSerializer(many=True, read_only=True)
-    
-    # Лайктар санын есептейтін жаңа өрістер
     likes_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
 
@@ -34,11 +32,9 @@ class PostSerializer(serializers.ModelSerializer):
         read_only_fields = ['author']
 
     def get_likes_count(self, obj):
-        # Постқа қанша адам лайк басқанын есептейді
         return obj.likes.count() if hasattr(obj, 'likes') else obj.like_set.count()
 
     def get_is_liked(self, obj):
-        # Қазіргі кіріп тұрған юзер лайк басты ма, жоқ па (True/False)
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return obj.likes.filter(user=request.user).exists() if hasattr(obj, 'likes') else obj.like_set.filter(user=request.user).exists()
@@ -63,10 +59,47 @@ class LikeSerializer(serializers.ModelSerializer):
 class FollowSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follow
-        fields = ['id', 'follower', 'followee'] # Моделіңде 'following' немесе 'followee' екенін тексер
+        fields = ['id', 'follower', 'followee']
 
 # 7. Сақталғандар
 class SavedPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = SavedPost
         fields = ['id', 'user', 'post']
+
+# --- ЖАҢА ҚОСЫЛҒАН СТОРИЗ СЕРИАЛИЗАТОРЛАРЫ ---
+
+# 8. Сториз Лайк
+class StoryLikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StoryLike
+        fields = ['id', 'user', 'story']
+        read_only_fields = ['user']
+
+# 9. Сториз Жауап (Reply)
+class StoryReplySerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source='user.username')
+
+    class Meta:
+        model = StoryReply
+        fields = ['id', 'story', 'user', 'username', 'text', 'created_at']
+        read_only_fields = ['user']
+
+# 10. Сториз (Басты сериализатор)
+class StorySerializer(serializers.ModelSerializer):
+    author_username = serializers.ReadOnlyField(source='user.username')
+    likes_count = serializers.SerializerMethodField()
+    replies = StoryReplySerializer(many=True, read_only=True)
+    is_active = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Story
+        fields = [
+            'id', 'user', 'author_username', 'file', 
+            'is_video', 'created_at', 'is_active', 
+            'likes_count', 'replies'
+        ]
+        read_only_fields = ['user']
+
+    def get_likes_count(self, obj):
+        return obj.likes.count()

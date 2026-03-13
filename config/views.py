@@ -1,11 +1,18 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone          # Уақытты анықтау үшін
+from datetime import timedelta             # 24 сағатты есептеу үшін
 
-from .models import  Post, Comment, Like, Follow, SavedPost, Media
+# Өз модельдеріңді толық тізіммен қосамыз
+from .models import (
+    User, Post, Comment, Like, Follow, 
+    SavedPost, Media, Story, StoryLike, StoryReply
+)
 from .serializers import *
 from .permissions import IsOwnerOrReadOnly
+
 
 # --- 1. AUTH & REGISTRATION ---
 @api_view(['POST'])
@@ -269,3 +276,75 @@ def media_detail(request, pk):
     elif request.method == 'DELETE':
         media.delete()
         return Response({"message": "Файл сәтті өшірілді"}, status=status.HTTP_204_NO_CONTENT)
+    
+    # --- 8. STORIES SYSTEM (24-hour posts) ---
+
+# 8.1. Сториздер тізімін алу және жаңа сториз салу
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def story_list_create(request):
+    if request.method == 'GET':
+        # Тек соңғы 24 сағатта салынған сториздерді алу
+        time_threshold = timezone.now() - timedelta(hours=24)
+        stories = Story.objects.filter(created_at__gt=time_threshold).order_by('-created_at')
+        serializer = StorySerializer(stories, many=True)
+        return Response(serializer.data)
+        
+    elif request.method == 'POST':
+        # Файл таңдалғанын тексеру
+        if 'file' not in request.FILES:
+            return Response({"error": "Файл (сурет немесе видео) жүктеу міндетті!"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        serializer = StorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# 8.2. Сторизге лайк басу (Toggle Like)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def story_like_toggle(request, pk):
+    try:
+        story = Story.objects.get(pk=pk)
+    except Story.DoesNotExist:
+        return Response({"error": "Сториз табылмады"}, status=status.HTTP_404_NOT_FOUND)
+
+    like_filter = StoryLike.objects.filter(story=story, user=request.user)
+    
+    if like_filter.exists():
+        like_filter.delete()
+        return Response({"message": "Unliked", "is_liked": False}, status=status.HTTP_200_OK)
+    else:
+        StoryLike.objects.create(story=story, user=request.user)
+        return Response({"message": "Liked", "is_liked": True}, status=status.HTTP_201_CREATED)
+
+# 8.3. Сторизге жауап (Reply) жазу
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def story_reply_create(request, pk):
+    try:
+        story = Story.objects.get(pk=pk)
+    except Story.DoesNotExist:
+        return Response({"error": "Сториз табылмады"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = StoryReplySerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=request.user, story=story)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# 8.4. Сторизді өшіру
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def story_delete(request, pk):
+    try:
+        story = Story.objects.get(pk=pk)
+    except Story.DoesNotExist:
+        return Response({"error": "Сториз табылмады"}, status=status.HTTP_404_NOT_FOUND)
+
+    if story.user != request.user:
+        return Response({"error": "Бұл сенің сторизің емес!"}, status=status.HTTP_403_FORBIDDEN)
+
+    story.delete()
+    return Response({"message": "Сториз өшірілді"}, status=status.HTTP_204_NO_CONTENT)
