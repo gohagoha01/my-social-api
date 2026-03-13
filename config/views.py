@@ -8,7 +8,7 @@ from datetime import timedelta             # 24 сағатты есептеу ү
 # Өз модельдеріңді толық тізіммен қосамыз
 from .models import (
     User, Post, Comment, Like, Follow, 
-    SavedPost, Media, Story, StoryLike, StoryReply
+    SavedPost, Media, Story, StoryLike, StoryReply, Note
 )
 from .serializers import *
 from .permissions import IsOwnerOrReadOnly
@@ -348,3 +348,41 @@ def story_delete(request, pk):
 
     story.delete()
     return Response({"message": "Сториз өшірілді"}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET', 'POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def note_list_create(request):
+    # 1. Заметка жазу немесе жаңарту
+    if request.method == 'POST':
+        text = request.data.get('text')
+        location = request.data.get('location', '')
+        
+        if not text or len(text) > 60:
+            return Response({"error": "Мәтін 1-60 символ аралығында болуы керек"}, status=400)
+            
+        note, created = Note.objects.update_or_create(
+            user=request.user,
+            defaults={'text': text, 'location': location}
+        )
+        serializer = NoteSerializer(note)
+        return Response(serializer.data, status=201)
+
+    # 2. Достардың заметкаларын көру (Feed)
+    elif request.method == 'GET':
+        # Сен жазылған адамдардың ID-лерін аламыз
+        following_ids = Follow.objects.filter(follower=request.user).values_list('followee_id', flat=True)
+        
+        # Соңғы 24 сағатта жазылған және сен жазылған адамдардың заметкалары
+        time_threshold = timezone.now() - timedelta(hours=24)
+        notes = Note.objects.filter(
+            user_id__in=following_ids, 
+            created_at__gt=time_threshold
+        ).order_by('-created_at')
+        
+        serializer = NoteSerializer(notes, many=True)
+        return Response(serializer.data)
+
+    # 3. Өз заметкаңды өшіру
+    elif request.method == 'DELETE':
+        Note.objects.filter(user=request.user).delete()
+        return Response({"message": "Заметка өшірілді"}, status=204)

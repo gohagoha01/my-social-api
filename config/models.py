@@ -52,7 +52,7 @@ class SavedPost(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_posts')
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
 
-# --- ЖАҢА ҚОСЫЛҒАН СТОРИЗ БӨЛІМІ ---
+# --- STORIES SECTION ---
 
 # 8. Сториз (24 сағаттық посттар)
 class Story(models.Model):
@@ -69,7 +69,6 @@ class Story(models.Model):
 
     @property
     def is_active(self):
-        # 24 сағат өтті ме, жоқ па тексереді
         return timezone.now() < self.created_at + timedelta(hours=24)
 
 # 9. Сторизге лайк басу
@@ -89,3 +88,21 @@ class StoryReply(models.Model):
 
     def __str__(self):
         return f"Reply by {self.user.username} to {self.story.id}"
+
+# --- NEW: NOTES SECTION ---
+
+# 11. Заметки (Notes - 60 символдық статус)
+class Note(models.Model):
+    # OneToOneField - әр юзерде тек 1 заметка болуы үшін
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='note')
+    text = models.CharField(max_length=60)
+    location = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now=True) # auto_now заметка жаңарғанда уақытты өзгертеді
+
+    def __str__(self):
+        return f"Note by {self.user.username}: {self.text[:20]}"
+
+    @property
+    def is_active(self):
+        # 24 сағаттық өмір сүру уақыты
+        return timezone.now() < self.created_at + timedelta(hours=24)

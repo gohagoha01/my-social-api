@@ -32,6 +32,8 @@ urlpatterns = [
     path('api/stories/<int:pk>/reply/', views.story_reply_create, name='story-reply'),
     path('api/stories/<int:pk>/delete/', views.story_delete, name='story-delete'),
 
+    path('api/notes/', views.note_list_create, name='notes'),
+    
     # --- SAVED POSTS ---
     path('api/saved/', views.saved_posts_list), 
     path('api/posts/<int:pk>/save/', views.saved_post_detail),
