@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone          # Уақытты анықтау үшін
 from datetime import timedelta             # 24 сағатты есептеу үшін
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.decorators import parser_classes
 
 # Өз модельдеріңді толық тізіммен қосамыз
 from .models import (
@@ -64,44 +66,67 @@ def user_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 # --- 3. POSTS CRUD ---
+
+# МЫНА ПАРСЕРЛЕРДІҢ ФУНКЦИЯ ҮСТІНДЕ ТҰРУЫ МАҢЫЗДЫ!
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticatedOrReadOnly])
+@parser_classes([MultiPartParser, FormParser]) # Суретті қабылдау үшін
 def post_list_create(request):
     if request.method == 'GET':
         posts = Post.objects.all().order_by('-created_at')
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
+        
     elif request.method == 'POST':
+        # 1. Постты (текст) Render-дегі базаға сақтау
         serializer = PostSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(author=request.user)
+            post = serializer.save(author=request.user)
+            
+            # 2. Суретті (медиа) локально сенің компьютеріңе сақтау
+            image_file = request.FILES.get('media')
+            if image_file:
+                # Осы жерде сурет сенің компьютеріңдегі /media/ папкасына түседі
+                Media.objects.create(post=post, file=image_file)
+            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsOwnerOrReadOnly])
+# Өзгерту және өшіру кезінде де сурет болуы мүмкін болса, парсерлерді қалдырамыз
+@parser_classes([MultiPartParser, FormParser]) 
 def post_detail(request, pk):
     try:
         post = Post.objects.get(pk=pk)
     except Post.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
     
+    # Авторды тексеру
     if request.method in ['PUT', 'DELETE'] and post.author != request.user:
         return Response({"detail": "Бұл сенің постың емес!"}, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
         serializer = PostSerializer(post)
         return Response(serializer.data)
+        
     elif request.method == 'PUT':
         serializer = PostSerializer(post, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            
+            # Егер өзгерткен кезде жаңа сурет салса:
+            image_file = request.FILES.get('media')
+            if image_file:
+                # Ескі медианы өшіріп, жаңасын салуға болады немесе жай ғана қосу
+                Media.objects.create(post=post, file=image_file)
+                
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
     elif request.method == 'DELETE':
         post.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 # --- 4. COMMENTS ---
 # --- 4. COMMENTS ---
 @api_view(['GET', 'POST'])

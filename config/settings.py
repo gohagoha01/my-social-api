@@ -7,9 +7,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-6-xzkn(qnwgt!u@=8+!sidpokm0h6e0p*6v8!^c_74y%q1%z=*')
 
-# Render-де DEBUG-ты False қылған дұрыс, бірақ қазірше True тұра берсін
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
+# 192.168.166.1 және Render домендеріне рұқсат беру үшін '*' қалдырамыз
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     # СЕРІКТЕС КІТАПХАНАЛАР
     'rest_framework',
     'rest_framework_simplejwt',
-    'whitenoise.runserver_nostatic', # Статика үшін
+    'whitenoise.runserver_nostatic',
     
     # СЕНІҢ ҚОСЫМШАҢ
     'config', 
@@ -31,7 +31,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # ОРНЫ ОСЫ ЖЕРДЕ БОЛУЫ ТИІС
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -59,10 +59,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# DATABASE - Render PostgreSQL-ге автоматты қосылу
+# DATABASE - Render-де PostgreSQL, локально SQLite қолданады
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}",
         conn_max_age=600
     )
 }
@@ -93,16 +93,16 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Almaty' # Қазақстан уақыты
 USE_I18N = True
 USE_TZ = True
 
-# СТАТИКАЛЫҚ ФАЙЛДАР (МАҢЫЗДЫ)
+# СТАТИКАЛЫҚ ФАЙЛДАР
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# МЕДИА ФАЙЛДАР
+# МЕДИА ФАЙЛДАР (СУРЕТТЕР ЛОКАЛЬНО САҚТАЛАДЫ)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
