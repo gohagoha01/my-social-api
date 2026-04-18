@@ -1,16 +1,17 @@
 import os
-import dj_database_url
 from pathlib import Path
 from datetime import timedelta
 
+# Негізгі жолдар
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-6-xzkn(qnwgt!u@=8+!sidpokm0h6e0p*6v8!^c_74y%q1%z=*')
+# Локальді жұмыс үшін DEBUG әрқашан True
+DEBUG = True
 
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+SECRET_KEY = 'django-insecure-local-only-key-12345'
 
-# 192.168.166.1 және Render домендеріне рұқсат беру үшін '*' қалдырамыз
-ALLOWED_HOSTS = ['*']
+# Телефоның мен компьютеріңнің IP адрестеріне рұқсат
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.166.1', '*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -23,7 +24,6 @@ INSTALLED_APPS = [
     # СЕРІКТЕС КІТАПХАНАЛАР
     'rest_framework',
     'rest_framework_simplejwt',
-    'whitenoise.runserver_nostatic',
     
     # СЕНІҢ ҚОСЫМШАҢ
     'config', 
@@ -31,7 +31,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -59,16 +58,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# DATABASE - Render-де PostgreSQL, локально SQLite қолданады
+# ДЕРЕКТЕР ҚОРЫ (ТЕК SQLITE)
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}",
-        conn_max_age=600
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
+# СЕНІҢ USER МОДЕЛІҢ
 AUTH_USER_MODEL = 'config.User'
 
+# REST FRAMEWORK ЖӘНЕ JWT БАПТАУЛАРЫ
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -85,24 +86,17 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-]
+# ТЕСТЕР ҮШІН ПАРОЛЬ ТЕКСЕРГІШТЕРДІ ӨШІРУГЕ БОЛАДЫ
+AUTH_PASSWORD_VALIDATORS = []
 
+# УАҚЫТ ЖӘНЕ ТІЛ
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Asia/Almaty' # Қазақстан уақыты
+TIME_ZONE = 'Asia/Almaty'
 USE_I18N = True
 USE_TZ = True
 
-# СТАТИКАЛЫҚ ФАЙЛДАР
+# СТАТИКАЛЫҚ ЖӘНЕ МЕДИА ФАЙЛДАР
 STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# МЕДИА ФАЙЛДАР (СУРЕТТЕР ЛОКАЛЬНО САҚТАЛАДЫ)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
