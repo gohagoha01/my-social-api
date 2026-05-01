@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Post, Media, Comment, Like, Follow, SavedPost
+from .models import User, Post, Media, Comment, Like, Follow, SavedPost, Advertisement
 
 # 1. User (Пайдаланушылар)
 @admin.register(User)
@@ -37,3 +37,9 @@ class FollowAdmin(admin.ModelAdmin):
 @admin.register(SavedPost)
 class SavedPostAdmin(admin.ModelAdmin):
     list_display = ('user', 'post')
+
+# 8. Advertisement (Жарнама - ОСЫНЫ ҚОСТЫҚ)
+@admin.register(Advertisement)
+class AdvertisementAdmin(admin.ModelAdmin):
+    list_display = ('title', 'created_at', 'link')
+    search_fields = ('title', 'description')

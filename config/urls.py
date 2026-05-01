@@ -1,15 +1,23 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include # include қосылды
 from django.conf import settings
 from django.conf.urls.static import static
+from rest_framework.routers import DefaultRouter # Router қосылды
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 from . import views 
 
+# Реклама ViewSet-ін тіркеу үшін Router қолданамыз
+router = DefaultRouter()
+router.register(r'ads', views.AdvertisementViewSet, basename='advertisement')
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    # --- ADS (РЕКЛАМА - ОСЫНЫ ҚОСТЫҚ) ---
+    path('api/', include(router.urls)), 
     
     # --- AUTH & REGISTER ---
     path('api/register/', views.register_user),
@@ -26,7 +34,7 @@ urlpatterns = [
     path('api/posts/<int:pk>/', views.post_detail),
     path('api/posts/<int:post_id>/like/', views.like_toggle),
 
-    # --- STORIES (ЖАҢА) ---
+    # --- STORIES ---
     path('api/stories/', views.story_list_create, name='story-list'),
     path('api/stories/<int:pk>/like/', views.story_like_toggle, name='story-like'),
     path('api/stories/<int:pk>/reply/', views.story_reply_create, name='story-reply'),

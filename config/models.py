@@ -79,6 +79,21 @@ class StoryLike(models.Model):
     class Meta:
         unique_together = ('story', 'user')
 
+# реклама
+class Advertisement(models.Model):
+    title = models.CharField(max_length=255, verbose_name="Тақырыбы")
+    image = models.ImageField(upload_to='ads/', verbose_name="Суреті")
+    description = models.TextField(verbose_name="Сипаттамасы")
+    link = models.URLField(verbose_name="Сілтеме (URL)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Жарнама"
+        verbose_name_plural = "Жарнамалар"
+
+    def __str__(self):
+        return self.title        
+
 # 10. Сторизге жауап жазу (Reply)
 class StoryReply(models.Model):
     story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='replies')

@@ -1,21 +1,28 @@
-from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.decorators import api_view, permission_classes, action, parser_classes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.response import Response
-from rest_framework import status
-from django.utils import timezone          # Уақытты анықтау үшін
-from datetime import timedelta             # 24 сағатты есептеу үшін
+from rest_framework import status, viewsets
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.decorators import parser_classes
 
 # Өз модельдеріңді толық тізіммен қосамыз
 from .models import (
     User, Post, Comment, Like, Follow, 
-    SavedPost, Media, Story, StoryLike, StoryReply, Note
+    SavedPost, Media, Story, StoryLike, StoryReply, Note, Advertisement
 )
 from .serializers import *
 from .permissions import IsOwnerOrReadOnly
 
+# 1. Advertisement ViewSet
+class AdvertisementViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Advertisement.objects.all().order_by('-created_at')
+    serializer_class = AdvertisementSerializer
+    permission_classes = [AllowAny]
 
+# ---------------------------------------------------------
+# Енді төменде өзіңнің ескі View-ларыңды жалғастыра бер...
+# ---------------------------------------------------------
 # --- 1. AUTH & REGISTRATION ---
 @api_view(['POST'])
 @permission_classes([AllowAny])

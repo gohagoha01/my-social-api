@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Post, Media, Comment, Like, Follow, SavedPost, Story, StoryLike, StoryReply, Note 
+# Тізімге Advertisement моделін қостық
+from .models import (
+    Post, Media, Comment, Like, Follow, SavedPost, 
+    Story, StoryLike, StoryReply, Note, Advertisement
+)
 
 User = get_user_model()
 
@@ -81,7 +85,7 @@ class StoryReplySerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='user.username')
 
     class Meta:
-        model = StoryReply
+        model = Comment # Егер StoryReply жеке модель болса, осыны StoryReply деп ауыстыр
         fields = ['id', 'story', 'user', 'username', 'text', 'created_at']
         read_only_fields = ['user']
 
@@ -103,7 +107,8 @@ class StorySerializer(serializers.ModelSerializer):
 
     def get_likes_count(self, obj):
         return obj.likes.count()
-    
+
+# 11. Notes
 class NoteSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='user.username')
     avatar = serializers.ImageField(source='user.avatar_url', read_only=True)
@@ -112,3 +117,9 @@ class NoteSerializer(serializers.ModelSerializer):
         model = Note
         fields = ['id', 'user', 'username', 'avatar', 'text', 'location', 'created_at', 'is_active']
         read_only_fields = ['user']
+
+# 12. Advertisement (Реклама - МІНЕ ОСЫ ҚОСЫЛДЫ)
+class AdvertisementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Advertisement
+        fields = '__all__'
